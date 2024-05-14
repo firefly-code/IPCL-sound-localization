@@ -4,6 +4,21 @@ import os
 import subprocess
 import shutil
 import re
+from pydub import AudioSegment
+import numpy as np
+import csv
+import os
+import subprocess
+import shutil
+import re
+import numpy as np
+import torch
+import torchaudio
+from df.enhance import enhance, init_df, load_audio, save_audio 
+import noisereduce as nr
+
+import librosa
+
 def renameData(csv_file, dataset):
     majcat_dic = {"animals":["dog","rooster", "pig", "cow", "frog", "cat", "hen", "insects", "sheep", "crow"],
             "natural": ["rain","sea_waves", "crackling_fire", "crickets", "chirping_birds", "water_drops", "wind", "pouring_water", "toilet_flush", "thunderstorm"],
@@ -44,6 +59,37 @@ def shortening(dataset):
         subprocess.run(command, shell=True)
         print(f"Trimmed {file} to 1 second.")
 
+def shortening2(dataset):
+    files = os.listdir(dataset)
+    for file in files:
+        input_file = os.path.join(dataset, file)
+        output_file = os.path.join("ESC-50-master/audioNoS2", file)
+        sound, sample_rate = torchaudio.load(input_file)
+        start_trim = detect_leading_silence(sound)
+        duration = len(sound[0])    
+        command = f"ffmpeg -y -ss {round(start_trim/sample_rate,2)} -t {round(duration/sample_rate,2)} -i {input_file} {output_file}"
+        subprocess.run(command, shell=True)
+        print(f"Removed slience{file}")
+
+def detect_leading_silence(sound, silence_threshold=0.5, chunk_size=75):
+    '''
+    sound is a pydub.AudioSegment
+    silence_threshold in dB
+    chunk_size in ms
+
+    iterate over chunks until you find the first one with sound
+    '''
+    trim_ms = 0 # ms
+    assert chunk_size > 0 # to avoid infinite loop
+    avg = torch.sqrt(torch.mean(sound[:,:]**2))
+    avgthresh= avg*silence_threshold
+    print(f"avg:{avg}")
+    print(avgthresh)
+    while torch.sqrt(torch.mean(sound[:,trim_ms:trim_ms+chunk_size]**2)) < avgthresh and trim_ms < len(sound[0]):
+        trim_ms += chunk_size
+    return max(trim_ms-3000,0)
+
+
 
 def training(dataset):
     for file in os.listdir(dataset):
@@ -64,13 +110,15 @@ def renameRemove1(dataset):
         new_file_path = os.path.join(dataset, file.replace("1","",1) )
         os.rename(original_file_path,new_file_path)
     
-renameRemove1("ESC-50-master/test")
-
+#renameRemove1("ESC-50-master/test")
 #test("ESC-50-master/audio1s")
 #training("ESC-50-master/audio1s")
-#shortening("ESC-50-master/audio")
+#shortening("ESC-50-master/audioNoS2")
+#shortening2("ESC-50-master/audio")
 #renameData("ESC-50-master/meta/esc50.csv", "ESC-50-master/audio")
-        
+
+test = np.load('ESC-50-master/Cochleagrams_PaulZimmer/Room_01_RT60_1.0_gx_1.5_gy_3.5_gz_1.5_Az_000_El_020_urban_train_5/arr_0.npy')
+print(test.shape)
 
 
                 
