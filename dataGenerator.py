@@ -109,6 +109,31 @@ def renameRemove1(dataset):
         original_file_path = os.path.join(dataset, file)
         new_file_path = os.path.join(dataset, file.replace("1","",1) )
         os.rename(original_file_path,new_file_path)
+        
+def dataset_to_ImageFolder(path):
+    destination = "Data/DataIPCL/ImageFolderDatasetTrainNew"
+    i = 0
+    if not os.path.exists(destination):
+        os.makedirs(destination)
+    for filename in os.listdir(path):
+        pattern = r"Az_(?P<azimuth>-?\d+)_El_(?P<elevation>-?\d+)"
+        match = re.search(pattern,filename)
+        azimuth = int(match.group('azimuth'))
+        elevation = int(match.group('elevation'))
+        if match:
+            classlabel = f"{i}_position_{azimuth}_{elevation}"
+            classdir = os.path.join(destination,f"class_{classlabel}")
+            if not os.path.exists(classdir):
+                os.makedirs(classdir)
+                i=i+1
+                
+            source = os.path.join(path, filename)
+            destination_new = os.path.join(classdir, filename)
+            shutil.move(source, destination_new)
+
+def add_label_to_class_dir(path):
+    for i,dir in enumerate(os.listdir(path)):
+        os.rename(os.path.join(path,dir),os.path.join(path,f"{i}_{dir}"))
     
 #renameRemove1("ESC-50-master/test")
 #test("ESC-50-master/audio1s")
@@ -117,8 +142,20 @@ def renameRemove1(dataset):
 #shortening2("ESC-50-master/audio")
 #renameData("ESC-50-master/meta/esc50.csv", "ESC-50-master/audio")
 
-test = np.load('ESC-50-master/Cochleagrams_PaulZimmer/Room_01_RT60_1.0_gx_1.5_gy_3.5_gz_1.5_Az_000_El_020_urban_train_5/arr_0.npy')
-print(test.shape)
+        # path, target = self.imgs[index]
+        # img = np.load(path)['arr_0']
+        # files = os.listdir(os.path.dirname(path))
+        # pattern = r"Az_(?P<azimuth>-?\d+)_El_(?P<elevation>-?\d+)"
+        # labelData = re.search(pattern, path)
+        # azimuth = int(labelData.group('azimuth'))
+        # elevation = int(labelData.group('elevation'))
+        # same_label = [p for p in files if re.search(r"Az_"+azimuth+"_El_"+elevation)]
+        # img = [np.load(random.choice(same_label))['arr_0'] for i in range(self.n_samples)]
+
+# test = np.load('ESC-50-master/Cochleagrams_PaulZimmer/Room_01_RT60_1.0_gx_1.5_gy_3.5_gz_1.5_Az_000_El_020_urban_train_5/arr_0.npy')
+# print(test.shape)
+add_label_to_class_dir("Data/DataIPCL/ImageFolderDatasetVal")
+
 
 
                 

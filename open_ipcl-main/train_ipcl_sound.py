@@ -1,6 +1,4 @@
-#!/usr/bin/env python
-# https://github.com/facebookresearch/moco
-# https://github.com/pytorch/examples/blob/master/imagenet/main.py
+
 import argparse
 import builtins
 import math
@@ -9,7 +7,6 @@ import random
 import shutil
 import time
 import warnings
-from addict import Dict
 
 import torch
 import torch.nn as nn
@@ -26,8 +23,8 @@ import torchvision.datasets as datasets
 from torch.utils.data import Dataset, DataLoader
 
 # import madgrad 
-from lib.utils import madgrad_wd
-# from torchlars import LARS
+# from lib.utils import madgrad_wd
+# # from torchlars import LARS
 from fastprogress.fastprogress import master_bar, progress_bar 
 from pdb import set_trace
 from functools import partial
@@ -40,27 +37,24 @@ from ipcl import IPCL0 as IPCL
 from lib.knn_monitor import knn_monitor, run_kNN
 
 from datasets import ImageFolderInstance, ImageFolderInstanceSamples
-# from kornia.filters import GaussianBlur2d as GaussianBlurGPU
-# from albumentations import (
-#     SmallestMaxSize, RandomResizedCrop, HorizontalFlip, CenterCrop,
-#     Compose as AlbumCompose,
-# )
-# from dataloaders.transforms import (
-#     InstanceSamplesTransform, ToNumpy
-#     # ToChannelsFirst, ToDevice, ToFloatDiv,
-#     # ColorJitterGPU, HSVJitterGPU, RandomContrastGPU, RandomGrayscaleGPU, RandomGaussianBlurGPU,
-#     # NormalizeGPU, Compose, RandomApply, RandomRotateGPU,
-#     # CircularMaskGPU, FixedOpticalDistortionGPU,
-#     # SRGB_to_LMS, LMS_To_LGN, LMS_To_LGN_Lum, LMS_To_LGN_Color,
-#     # CenterCropResize
-# )
+ 
+from dataloaders.transforms import (
+    InstanceSamplesTransform, ToNumpy,
+    ToChannelsFirst, ToDevice, ToFloatDiv,
+    ColorJitterGPU, HSVJitterGPU, RandomContrastGPU, RandomGrayscaleGPU, RandomGaussianBlurGPU,
+    NormalizeGPU, Compose, RandomApply, RandomRotateGPU,
+    CircularMaskGPU, FixedOpticalDistortionGPU,
+    SRGB_to_LMS, LMS_To_LGN, LMS_To_LGN_Lum, LMS_To_LGN_Color,
+    CenterCropResize
+)
+from addict import Dict
 
 from dataloaders.utils import open_image, open_image_array
 from dataloaders.dataloader import FastLoader
 
-model_names = sorted(name for name in models.__dict__
-    if name.islower() and not name.startswith("__")
-    and callable(models.__dict__[name]))
+# model_names = sorted(name for name in models.__dict__
+#     if name.islower() and not name.startswith("__")
+#     and callable(models.__dict__[name]))
 
 # parser = argparse.ArgumentParser(description='IPCL PyTorch Training')
 # parser.add_argument('data', metavar='DIR',
@@ -149,126 +143,42 @@ model_names = sorted(name for name in models.__dict__
 
 IMAGENET_DEFAULT_MEAN = (0.485, 0.456, 0.406)
 IMAGENET_DEFAULT_STD = (0.229, 0.224, 0.225)
- 
 
 
-# class AlbumTransforms(object):
-#     def __init__(self, transform):
-#         self.transform = transform
-    
-#     def __call__(self, x):
-#         return self.transform(image=x)['image']
         
-def get_transforms_custom(image_size=256, crop_size=224, n_samples=5, device=None,
-                          do_blur=False, rotation=0, pad_mode='zeros', 
-                          circular_window=False, distortion=False,
-                          mean=IMAGENET_DEFAULT_MEAN, std=IMAGENET_DEFAULT_STD):
-    
-    if device is None:
-        device = 'cuda' if torch.cuda.is_available() else 'cpu'    
-        
-    # =========================
-    #  Before Batch Transforms
-    # =========================
-
-    # before_tranforms = [
-    #     SmallestMaxSize(image_size),
-    #     RandomResizedCrop(crop_size,crop_size,scale=(0.2, 1.), ratio=(0.75, 1.3333333333333333), p=1.0),
-    #     HorizontalFlip(p=.5),
-    # ]
-
-    # tfrm = AlbumCompose(before_tranforms)
-    # print(tfrm)
-    
-    # before_batch = InstanceSamplesTransform(pth_transforms.Compose([lambda x: tfrm(image=x)['image']]), 
-    #                                        n_samples=n_samples)          
-    
-    before_batch = None
-    # before_batch = pth_transforms.Compose([lambda x: tfrm(image=x)['image']]) 
-    # before_batch = pth_transforms.Compose([AlbumTransforms(tfrm)])
-    
-    # =========================
-    #  After Batch Transforms
-    # =========================
-
-    # similar to wu et al
-    # baseline_transforms = [
-    #     ToChannelsFirst(),
-    #     ToDevice(device),
-    #     ToFloatDiv(255.),  
-    #     RandomGrayscaleGPU(p=0.2),
-    #     ColorJitterGPU(p=1.0, hue=.4, saturation=.4, value=.4, contrast=.4),
-    # ]
-    
-    # after_transforms = baseline_transforms
-        
-    # if do_blur:
-    #     after_transforms += [RandomGaussianBlurGPU(p=0.5, sigma=[.1, 2.])]
-    
-    # if rotation:
-    #     after_transforms += [RandomRotateGPU(p=1.0, max_deg=rotation, pad_mode=pad_mode)]
-    
-    # if circular_window:
-    #     after_transforms += [CircularMaskGPU(crop_size, blur_span=12, device=device)]
-        
-    # if distortion:
-    #     after_transforms += [FixedOpticalDistortionGPU(crop_size, crop_size, device=device)]        
-    
-    # if mean and std:
-    #     after_transforms += [NormalizeGPU(mean=mean, std=std, device=device)]
-        
-    # after_batch_tfrm = pth_transforms.Compose(after_transforms)
-    after_batch_tfrm = None
-    print(after_batch_tfrm)
-
-    def after_batch(batch):
-        if isinstance(batch[0], list):
-            batch[0] = [after_batch_tfrm(b) for b in batch[0]]
-        else:
-            batch[0] = after_batch_tfrm(batch[0])
-        return batch
-
-    return before_batch, after_batch
-
 def main():
-    args = args = Dict({
-    "data": 'Data/DataIPCL',
-    "out_dir": "Results",
-    "arch": "ResNet34",
-    "num_workers": 5,
-    "num_epochs": 5,
-    "start_epoch": 0,
-    "evaluate":0,
-    "batch_size":10,
-    "print_freq":10,
-    "resume": "",
-    "world_size":-1,
-    "rank":-1,
-    "dist_url":'tcp://224.66.41.62:23456',
-    "dist_backend":'nccl',
-    "seed":None,
-    "gpu":'cuda:0',
-    "multiprocessing_distributed":False,
-    "opt":"SGD",
-    "use_lars":0,
-    "lr":0.001,
-    "momentum":0.9,
-    "wd":0.005,
-    "batch_multiplier":20,
-    "scheduler":'CosineAnnealing',
-    "schedule":[120, 160],
-    "div_factor":1000,
-    "pct_start":0.4,
-    "tau_scheduler":'CosineAnnealing',
-    "tau_scheduler_start_val": 0.1,
-    "tau_scheduler_end_val": 0.01,
-    "ipcl_dim":32,
-    "ipcl_k":1024,
-    "ipcl_t":0.7,
-    "ipcl_n":5,
-
-    
+    args = Dict({
+    "data": '/home/jovyan/work/DataSetsLocal/ImageSets/imagenet/ILSRC2012-Pytorch-Short256',
+    "out_dir": "./results/step_by_step_imagenet_instance06_replicate_stack/ipcl_alpha_stack_alexnet_gn_n5_lr03_pct40_t07_div1000_e100_bs128_bm20_rep2",
+    "memory_device": 'gpu',
+    # "memmap_filename": "/home/jovyan/work/Projects/InstanceNetReplication/lemniscate/results/instance_memmap_bm1_n5_lr03_t30/indexed_store.npy",
+    "memmap_filename": '',
+    "loader": "pt",
+    "lr": 0.03,
+    "cyclic": False,
+    # "resume": './results/06_instance_imagenet_AlexNet_n5_lr03_pct40_t10_div1000_e100_bs128_bm20/05_instance_imagenet_AlexNet_n5_checkpoint.pth.tar',
+    "test_only": False,
+    "arch": "alexnet_half",
+    "to_half": False,
+    "low_dim": 128, # number of features in final layer
+    "nce_k": 4096, # size of memory bank / number of nce samples
+    "nce_t": 0.07, # softmax temperature parameter (origional = .1 for cifar10)
+    "nce_m": 0.0, # weight momentum (original = 0.5)
+    "nce_n": 5, # number of samples per image
+    "epochs": 100,
+    "include_self": True,
+    "store_mean": False,
+    "batch_size": 128,
+    "batch_multiplier": 20,
+    "pct_start": .40,
+    "div_factor": 1000.0, 
+    "print_freq": 500,
+    "num_workers": 20,
+    "max_prefetch": 0,
+    "supervised": False,
+    "groupnorm": True,
 })
+
 
     if args.seed is not None:
         random.seed(args.seed)
@@ -305,7 +215,7 @@ def main():
 def main_worker(gpu, ngpus_per_node, args):
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     args.gpu = gpu
-    args.device = f'{args.gpu}' if args.gpu is not None else device
+    args.device = f'cuda:{args.gpu}' if args.gpu is not None else device
     
     # default filename
     if args.resume == '':
@@ -351,8 +261,8 @@ def main_worker(gpu, ngpus_per_node, args):
     # ----------------------------------------------
     
     print("=> creating model '{}'".format(args.arch))
-    model = IPCL(models.__dict__[args.arch](num_classes=args.ipcl_dim), 
-                 8969, # number of imagenet images
+    model = IPCL(models.__dict__[args.arch](out_dim=args.ipcl_dim), 
+                 1281167, # number of imagenet images
                  K=args.ipcl_k, 
                  T=args.ipcl_t, 
                  out_dim=args.ipcl_dim, 
@@ -380,6 +290,7 @@ def main_worker(gpu, ngpus_per_node, args):
     #     from utils import LARS
     #     optimizer = LARS(model.parameters(), lr=args.lr, weight_decay=args.wd, momentum=args.momentum, eta=0.001)
         
+        
     print(optimizer)
     
     # ----------------------------------------------
@@ -388,7 +299,7 @@ def main_worker(gpu, ngpus_per_node, args):
     
     # TRANSFORMS
     root_dir = Path(args.data)
-    # before_batch_train_tfrm, after_batch_train_trfm = get_transforms_custom(n_samples=args.ipcl_n)
+    before_batch_train_tfrm, after_batch_train_trfm = 'get_transforms_custom'(n_samples=args.ipcl_n)
     
     # DATALOADERS for IPCL training / validation    
     if args.distributed:
@@ -398,21 +309,25 @@ def main_worker(gpu, ngpus_per_node, args):
     
     # TODO: modify instance sampling to happen before collation (as a transform)
     # so that we don't have to use torch.cat to stack imgs (which creates a new copy, like slowing down)
-
-    paths_train= list(Path(root_dir/"ImageFolderDatasetTrain").glob('*/*.npz'))
-    paths_val=list(Path(root_dir/"ImageFolderDatasetVal").glob('*/*.npz'))
-    train_dataset = ImageFolderInstanceSamples(paths= paths_train,
-                                               n_samples=args.ipcl_n)
+    train_dataset = ImageFolderInstanceSamples(root=root_dir/"train", 
+                                               n_samples=args.ipcl_n,
+                                               loader=open_image_array, 
+                                               transform=before_batch_train_tfrm)
         
-    val_dataset = ImageFolderInstanceSamples(paths=paths_val, 
-                                             n_samples=args.ipcl_n)
+    val_dataset = ImageFolderInstanceSamples(root=root_dir/"val", 
+                                             n_samples=args.ipcl_n,
+                                             loader=open_image_array, 
+                                             transform=before_batch_train_tfrm)
     
-    # assert len(train_dataset) == 1281167, f"Oops, expected num train images = 1281167, got {len(train_dataset)}"
-    # assert len(val_dataset) == 50000, f"Oops, expected num train images = 50000, got {len(val_dataset)}"
+    assert len(train_dataset) == 1281167, f"Oops, expected num train images = 1281167, got {len(train_dataset)}"
+    assert len(val_dataset) == 50000, f"Oops, expected num train images = 50000, got {len(val_dataset)}"
+    
+    print(train_dataset)
+    print(val_dataset)
     
     train_loader = FastLoader(
         train_dataset, 
-        after_batch=None, 
+        after_batch=after_batch_train_trfm, 
         batch_size=args.batch_size, 
         shuffle=(train_sampler is None), 
         num_workers=args.num_workers, 
@@ -422,7 +337,7 @@ def main_worker(gpu, ngpus_per_node, args):
         
     val_loader = FastLoader(
         val_dataset, 
-        after_batch=None, 
+        after_batch=after_batch_train_trfm, 
         batch_size=args.batch_size, 
         shuffle=False, 
         num_workers=args.num_workers, 
@@ -439,12 +354,12 @@ def main_worker(gpu, ngpus_per_node, args):
     ])
         
     train_dataset = ImageFolderInstanceSamples(
-        paths=paths_train, n_samples=1
+        root=root_dir/"train", n_samples=1, transform=knn_transform
     )
     print(train_dataset)
 
     val_dataset = ImageFolderInstanceSamples(
-        paths=paths_val, n_samples=1
+        root=root_dir/"val", n_samples=1, transform=knn_transform
     )
     print(val_dataset)
 
@@ -491,8 +406,8 @@ def main_worker(gpu, ngpus_per_node, args):
     if args.tau_scheduler is not None:
         print("==> setting up tau scheduler:")
         tau_scheduler = partial(cosine_annealing, total_iters=args.num_epochs*len(loaders[0]), 
-                                start_val=args.tau_scheduler_start_val, 
-                                end_val=args.tau_scheduler_end_val)
+                                start_val=args.tau_scheduler.start_val, 
+                                end_val=args.tau_scheduler.end_val)
         
     # ----------------------------------------------
     #  DISTRIBUTED TRAINING
@@ -582,6 +497,7 @@ def main_worker(gpu, ngpus_per_node, args):
                 tau_scheduler=tau_scheduler,
                 perf_monitor=perf_monitor,
                 args=args)
+
 
 def train_model(
     learner,
@@ -674,8 +590,8 @@ def train_model(
     top1, top5 = run_kNN(learner.base_encoder, train_loader_knn, val_loader_knn, knn_device=args.device)
 
     print("=> all done!")
-            
-            
+
+
 def train(epoch, learner, optimizer, train_loader, args, batch_multiplier=1.,
           scheduler=None, tau_scheduler=None, mb=None):
 
@@ -711,7 +627,6 @@ def train(epoch, learner, optimizer, train_loader, args, batch_multiplier=1.,
     
         #optimizer.zero_grad()
         loss, (embeddings, prototypes) = learner(inputs, targs)
-        print(loss)
         loss = loss / float(batch_multiplier)
         losses.update(loss.item(), 1)
         loss.backward()
@@ -849,14 +764,3 @@ def accuracy(output, target, topk=(1,)):
             correct_k = correct[:k].view(-1).float().sum(0, keepdim=True)
             res.append(correct_k.mul_(100.0 / batch_size))
         return res
-
-
-if __name__ == '__main__':
-    '''
-    
-        CUDA_VISIBLE_DEVICES='0' python train_ipcl.py -a alexnet_gn --gpu 0 --opt SGD --scheduler OneCycle --use-lars 0 -b 256 --batch-multiplier 10 /n/holyscratch01/alvarez_lab/Lab/datasets/imagenet-256
-        
-        CUDA_VISIBLE_DEVICES='0' python train_ipcl.py -b 128 -bm 20 -a alexnet_gn --gpu 0 --opt SGD --scheduler OneCycle --use-lars 0 /n/holyscratch01/alvarez_lab/Lab/datasets/imagenet-256
-
-    '''
-    main()

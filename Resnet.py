@@ -155,6 +155,8 @@ class ResNet(nn.Module):
         x = x.reshape(x.shape[0], -1)
 
         x = self.fc(x)
+        
+        
 
         return x
 
@@ -189,7 +191,7 @@ class ResNet(nn.Module):
         return nn.Sequential(*layers)
 
 
-def ResNet28(sound_channel, num_classes):
+def ResNet34(sound_channel, num_classes):
     return ResNet(block, [3, 4, 6, 3], sound_channel, num_classes)
 
 def ResNet18(sound_channel, num_classes):
@@ -239,7 +241,7 @@ def train_one_epoch(epoch_index, tb_writer,train_dataloader,optimizer,model,loss
 
 def RunTraining():
     
-    net = ResNet28(sound_channel=2, num_classes=190).to('cuda')
+    net = ResNet34(sound_channel=2, num_classes=190).to('cuda')
     
     learning_rate = 0.01
     dataset_train = CochleagramLoader(list(Path("Data/Train").glob('*.npz')))
@@ -318,18 +320,17 @@ def RunTraining():
 
         epoch_number += 1
 def RunTestSet():
-    model = ResNet28(sound_channel=2, num_classes=190).to('cpu')
+    model = ResNet34(sound_channel=2, num_classes=190).to('cpu')
     model.load_state_dict(torch.load("model_20240509_003608_24"))
     model.eval()
     y_vs_yhat = []
-    dataset_val = CochleagramLoader(list(Path("Data/TrainSandBig").glob('*.npz')))
+    dataset_val = CochleagramLoader(list(Path("Data/Val").glob('*.npz')))
     validation_dataloader = DataLoader(dataset_val, batch_size=1, shuffle=True)
     for image,label in list(validation_dataloader):
         with torch.no_grad():
           pred = model(image)
           _, predictionV = torch.max(pred.data,1)
           y_vs_yhat.append([label.cpu().numpy(),predictionV.cpu().numpy()])
-    
     np.save("val_data2",np.array(y_vs_yhat))
         
 

@@ -10,22 +10,25 @@ from PIL import Image, ImageEnhance
 from IPython.core.debugger import set_trace
 import torch.nn.functional as F
 import cv2
+import collections.abc as container_abcs
+
+
 # from albumentations import functional as AF
 
-try:
-    from albumentations.augmentations.geometric import functional as AF
-except:
-    import albumentations.augmentations.functional as AF
+# try:
+#     from albumentations.augmentations.geometric import functional as AF
+# except:
+#     import albumentations.augmentations.functional as AF
     
-try:
-    from torch._six import container_abcs, string_classes, int_classes
-except:
-    # some issue with torch v1.9
-    import collections.abc as container_abcs 
-    from torch._six import string_classes
-    int_classes = int
+# try:
+#     from torch._six import container_abcs, string_classes, int_classes
+# except:
+#     # some issue with torch v1.9
+#     import collections.abc as container_abcs 
+#     from torch._six import string_classes
+#     int_classes = int
     
-resize = AF.resize
+# resize = AF.resize
 
 default_device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
@@ -1211,8 +1214,8 @@ def srgb_to_lrgb(image: torch.Tensor, inplace=True) -> torch.Tensor:
         >>> output = rgb_to_xyz(input)  # 2x3x4x5
     """
     
-    if (image.max() > 1):
-        warnings.warn('srgb_to_lrgb: srgb appears to be outside the (0,1) range');
+    # if (image.max() > 1):
+    #     warnings.warn('srgb_to_lrgb: srgb appears to be outside the (0,1) range');
 
     if not isinstance(image, torch.Tensor):
         raise TypeError("Input type is not a torch.Tensor. Got {}".format(

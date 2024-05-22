@@ -3,29 +3,31 @@ import numpy as np
 import torch
 import random
 import numbers
-import kornia
+# import kornia
 import cv2
 from PIL import Image
 from IPython.core.debugger import set_trace
 from torch.nn.functional import relu
-from kornia.filters.kernels import get_gaussian_kernel2d
-from albumentations import transforms as AT
+# from kornia.filters.kernels import get_gaussian_kernel2d
+# from albumentations import transforms as AT
 
 from . import functional as F
 from . import functional_tensor as FT
 
-__all__ = ['GaussianBlurMoCo', 'RandomGaussianBlurGPU',
-           'ColorJitterGPU', 'ToGrayscaleTorchGPU',
-           'HSVJitterGPU', 'ToGrayscaleGPU', 'RandomGrayscaleGPU',
-           'RandomBrightness', 'RandomContrastGPU',
-           'ToNumpy', 'ToChannelsFirst', 'ToChannelsLast', 
-           'ToDevice', 'ToFloat', 'ToFloatDiv',
-           'NormalizeGPU',
-           'RandomHorizontalFlipGPU', 'RandomRotateGPU', 'RandomZoomGPU',
-           'RandomRotateObjectGPU',
-           'Compose', 'RandomApply',
-           'FixedOpticalDistortionGPU', 'CircularMaskGPU',
-           'LMS_To_LGN', 'LMS_To_LGN_Lum', 'LMS_To_LGN_Color']
+# __all__ = ['GaussianBlurMoCo', 'RandomGaussianBlurGPU',
+#            'ColorJitterGPU', 'ToGrayscaleTorchGPU',
+#            'HSVJitterGPU', 'ToGrayscaleGPU', 'RandomGrayscaleGPU',
+#            'RandomBrightness', 'RandomContrastGPU',
+#            'ToNumpy', 'ToChannelsFirst', 'ToChannelsLast', 
+#            'ToDevice', 'ToFloat', 'ToFloatDiv',
+#            'NormalizeGPU',
+#            'RandomHorizontalFlipGPU', 'RandomRotateGPU', 'RandomZoomGPU',
+#            'RandomRotateObjectGPU',
+#            'Compose', 'RandomApply',
+#            'FixedOpticalDistortionGPU', 'CircularMaskGPU',
+#            'LMS_To_LGN', 'LMS_To_LGN_Lum', 'LMS_To_LGN_Color']
+__all__ = ['HSVJitterGPU']
+
 
 default_device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
@@ -59,34 +61,34 @@ class NormalizeGPU(object):
 #  Gaussian Blur
 # =================================================
 
-def quick_blur(x):
-    sigma = random.uniform(.1, 2.0)
-    size = int(math.ceil(sigma*2.5))
-    if size % 2 == 0: size = size + 1
-    gauss = kornia.filters.GaussianBlur2d((size, size), (sigma, sigma))
-    return gauss(x)
+# def quick_blur(x):
+#     sigma = random.uniform(.1, 2.0)
+#     size = int(math.ceil(sigma*2.5))
+#     if size % 2 == 0: size = size + 1
+#     gauss = kornia.filters.GaussianBlur2d((size, size), (sigma, sigma))
+#     return gauss(x)
 
-class RandomGaussianBlurGPU(object):
-    """Gaussian blur augmentation in SimCLR https://arxiv.org/abs/2002.05709"""
+# class RandomGaussianBlurGPU(object):
+#     """Gaussian blur augmentation in SimCLR https://arxiv.org/abs/2002.05709"""
 
-    def __init__(self, p=.5, sigma=[.1, 2.]):
-        self.p = p
-        self.sigma_range = sigma
-        self.kernel = None
+#     def __init__(self, p=.5, sigma=[.1, 2.]):
+#         self.p = p
+#         self.sigma_range = sigma
+#         self.kernel = None
         
-    def before_call(self, b, **kwargs):
-        "before_call the state for input `b`"
-        self.do = any(kwargs) or self.p==1. or random.random() < self.p
+#     def before_call(self, b, **kwargs):
+#         "before_call the state for input `b`"
+#         self.do = any(kwargs) or self.p==1. or random.random() < self.p
         
-        sigma = random.uniform(self.sigma_range[0], self.sigma_range[1])
-        sigma = kwargs['sigma'] if 'sigma' in kwargs else sigma
+#         sigma = random.uniform(self.sigma_range[0], self.sigma_range[1])
+#         sigma = kwargs['sigma'] if 'sigma' in kwargs else sigma
         
-        size = int(math.ceil(sigma*2.5))
-        if size % 2 == 0: size = size + 1
+#         size = int(math.ceil(sigma*2.5))
+#         if size % 2 == 0: size = size + 1
         
-        self.sigma = sigma if self.do else None
-        self.size = size if self.do else None        
-        self.kernel = kornia.filters.GaussianBlur2d((size, size), (sigma, sigma)) if self.do else None
+#         self.sigma = sigma if self.do else None
+#         self.size = size if self.do else None        
+#         self.kernel = kornia.filters.GaussianBlur2d((size, size), (sigma, sigma)) if self.do else None
     
     def last_params(self):
         return {
@@ -115,20 +117,20 @@ class RandomGaussianBlurGPU(object):
         format_string += ', sigma={0})'.format(self.sigma_range)
         return format_string
 
-class GaussianBlurMoCo(object):
-    """Gaussian blur augmentation in SimCLR https://arxiv.org/abs/2002.05709"""
+# class GaussianBlurMoCo(object):
+#     """Gaussian blur augmentation in SimCLR https://arxiv.org/abs/2002.05709"""
 
-    def __init__(self, sigma=[.1, 2.]):
-        self.sigma = sigma
+#     def __init__(self, sigma=[.1, 2.]):
+#         self.sigma = sigma
 
-    def __call__(self, x):
-        sigma = random.uniform(self.sigma[0], self.sigma[1])
-        x = x.filter(ImageFilter.GaussianBlur(radius=sigma))
-        return x
+#     def __call__(self, x):
+#         sigma = random.uniform(self.sigma[0], self.sigma[1])
+#         x = x.filter(ImageFilter.GaussianBlur(radius=sigma))
+#         return x
     
-# =================================================
-#  Instance Sampler
-# =================================================
+# # =================================================
+# #  Instance Sampler
+# # =================================================
 
 class InstanceSamplesTransform:
     """transform input `n_samples` times"""
@@ -1449,200 +1451,200 @@ class SRGB_to_LMS(object):
     def __repr__(self):
         return self.__class__.__name__+'()'
     
-class LMS_To_LGN(object):
+# class LMS_To_LGN(object):
     
-    def __init__(self, size=21, sigma=2.5, sigmaRatio=0.5, polarity=0,
-                 oppSize=21, oppCenterSigma=2.5, oppSurroundSigma=2.5*1.57,
-                 pad_mode='reflect', device=None, lm_only=False):
-        super().__init__()
+#     def __init__(self, size=21, sigma=2.5, sigmaRatio=0.5, polarity=0,
+#                  oppSize=21, oppCenterSigma=2.5, oppSurroundSigma=2.5*1.57,
+#                  pad_mode='reflect', device=None, lm_only=False):
+#         super().__init__()
         
-        if device is None: device = 'cuda' if torch.cuda.is_available() else 'cpu'
-        self.device = device
-        self.pad_mode = pad_mode
-        self.lm_only = lm_only
+#         if device is None: device = 'cuda' if torch.cuda.is_available() else 'cpu'
+#         self.device = device
+#         self.pad_mode = pad_mode
+#         self.lm_only = lm_only
         
-        # luminance channel, difference of gaussians filter
-        self.size = size
-        self.sigma = sigma
-        self.sigmaRatio = sigmaRatio                
-        self.polarity = polarity # 0 => off-center unit
-        self.kernel1 = get_gaussian_kernel2d((size,size),(sigma,sigma)).unsqueeze(0)
-        self.kernel2 = get_gaussian_kernel2d((size,size),(sigma*sigmaRatio,sigma*sigmaRatio)).unsqueeze(0)
-        self.DoG = (self.kernel1 - self.kernel2) if polarity == 0 else (self.kernel2 - self.kernel1)
+#         # luminance channel, difference of gaussians filter
+#         self.size = size
+#         self.sigma = sigma
+#         self.sigmaRatio = sigmaRatio                
+#         self.polarity = polarity # 0 => off-center unit
+#         self.kernel1 = get_gaussian_kernel2d((size,size),(sigma,sigma)).unsqueeze(0)
+#         self.kernel2 = get_gaussian_kernel2d((size,size),(sigma*sigmaRatio,sigma*sigmaRatio)).unsqueeze(0)
+#         self.DoG = (self.kernel1 - self.kernel2) if polarity == 0 else (self.kernel2 - self.kernel1)
         
-        # center, surround gaussians for computing single-opponent color responses
-        self.oppSize = oppSize
-        self.oppCenterSigma = oppCenterSigma
-        self.oppSurroundSigma = oppSurroundSigma
-        self.oppCenter = get_gaussian_kernel2d((oppSize,oppSize),(oppCenterSigma,oppCenterSigma)).unsqueeze(0)
-        self.oppSurround = get_gaussian_kernel2d((oppSize,oppSize),(oppSurroundSigma,oppSurroundSigma)).unsqueeze(0)
+#         # center, surround gaussians for computing single-opponent color responses
+#         self.oppSize = oppSize
+#         self.oppCenterSigma = oppCenterSigma
+#         self.oppSurroundSigma = oppSurroundSigma
+#         self.oppCenter = get_gaussian_kernel2d((oppSize,oppSize),(oppCenterSigma,oppCenterSigma)).unsqueeze(0)
+#         self.oppSurround = get_gaussian_kernel2d((oppSize,oppSize),(oppSurroundSigma,oppSurroundSigma)).unsqueeze(0)
         
-    def __call__(self, x, replay=False):
+#     def __call__(self, x, replay=False):
         
-        if len(x.shape)==3:
-            x = x.unsqueeze(0)
+#         if len(x.shape)==3:
+#             x = x.unsqueeze(0)
         
-        # luminance can be over l+m responses only
-        if self.lm_only:
-            luminance = x[:,0:2,:,:].sum(dim=1,keepdims=True)
-        else:
-            luminance = x[:,0:3,:,:].sum(dim=1,keepdims=True)
-        OffCellResponse = kornia.filter2D(luminance, self.DoG, self.pad_mode)
-        OnCellResponse = -1.0 * OffCellResponse
-        OffCellResponse[OffCellResponse < 0] = 0
-        OnCellResponse[OnCellResponse < 0] = 0
+#         # luminance can be over l+m responses only
+#         if self.lm_only:
+#             luminance = x[:,0:2,:,:].sum(dim=1,keepdims=True)
+#         else:
+#             luminance = x[:,0:3,:,:].sum(dim=1,keepdims=True)
+#         OffCellResponse = kornia.filter2D(luminance, self.DoG, self.pad_mode)
+#         OnCellResponse = -1.0 * OffCellResponse
+#         OffCellResponse[OffCellResponse < 0] = 0
+#         OnCellResponse[OnCellResponse < 0] = 0
         
-        # single opponent, center minus surround
-        c = kornia.filter2D(x, self.oppCenter, self.pad_mode)
-        s = kornia.filter2D(x, self.oppSurround, self.pad_mode)
-        Lp_Mn = c[:,0:1,:,:] - s[:,1:2,:,:] # L+/M-
-        Mp_Ln = c[:,1:2,:,:] - s[:,0:1,:,:] # M+/L-
-        Sp_LMn = c[:,2:3,:,:] - (s[:,0:1,:,:]*.5 + s[:,1:2,:,:]*.5) # S+/(L+M)- with L+M averaged
-        LMp_Sn = (c[:,0:1,:,:]*.5 + c[:,1:2,:,:]*.5) - s[:,2:3,:,:] # (L+M)+/S-
+#         # single opponent, center minus surround
+#         c = kornia.filter2D(x, self.oppCenter, self.pad_mode)
+#         s = kornia.filter2D(x, self.oppSurround, self.pad_mode)
+#         Lp_Mn = c[:,0:1,:,:] - s[:,1:2,:,:] # L+/M-
+#         Mp_Ln = c[:,1:2,:,:] - s[:,0:1,:,:] # M+/L-
+#         Sp_LMn = c[:,2:3,:,:] - (s[:,0:1,:,:]*.5 + s[:,1:2,:,:]*.5) # S+/(L+M)- with L+M averaged
+#         LMp_Sn = (c[:,0:1,:,:]*.5 + c[:,1:2,:,:]*.5) - s[:,2:3,:,:] # (L+M)+/S-
                 
-        out = torch.cat([OnCellResponse, OffCellResponse, 
-                         Lp_Mn, Mp_Ln, 
-                         Sp_LMn, LMp_Sn], dim=1)
+#         out = torch.cat([OnCellResponse, OffCellResponse, 
+#                          Lp_Mn, Mp_Ln, 
+#                          Sp_LMn, LMp_Sn], dim=1)
  
-        return relu(out.squeeze())
+#         return relu(out.squeeze())
 
-    def __repr__(self):
-        format_string = self.__class__.__name__ + f'(size={self.size}'
-        format_string += ', sigma={0:3.3f}'.format(self.sigma)
-        format_string += ', sigmaRatio={0:3.3f}'.format(self.sigmaRatio)
-        format_string += ', oppSize={0}'.format(self.oppSize)
-        format_string += ', oppCenterSigma={0:3.3f}'.format(self.oppCenterSigma)
-        format_string += ', oppSurroundSigma={0:3.3f}'.format(self.oppSurroundSigma)
-        format_string += f", device='{self.device}'"
-        format_string += ')'
-        return format_string
+#     def __repr__(self):
+#         format_string = self.__class__.__name__ + f'(size={self.size}'
+#         format_string += ', sigma={0:3.3f}'.format(self.sigma)
+#         format_string += ', sigmaRatio={0:3.3f}'.format(self.sigmaRatio)
+#         format_string += ', oppSize={0}'.format(self.oppSize)
+#         format_string += ', oppCenterSigma={0:3.3f}'.format(self.oppCenterSigma)
+#         format_string += ', oppSurroundSigma={0:3.3f}'.format(self.oppSurroundSigma)
+#         format_string += f", device='{self.device}'"
+#         format_string += ')'
+#         return format_string
     
-class LMS_To_LGN_Lum(object):
+# class LMS_To_LGN_Lum(object):
     
-    def __init__(self, size=21, sigma=2.5, sigmaRatio=0.5, polarity=0,
-                 pad_mode='reflect', device=None, lm_only=False):
-        super().__init__()
+#     def __init__(self, size=21, sigma=2.5, sigmaRatio=0.5, polarity=0,
+#                  pad_mode='reflect', device=None, lm_only=False):
+#         super().__init__()
         
-        if device is None: device = 'cuda' if torch.cuda.is_available() else 'cpu'
-        self.device = device
-        self.pad_mode = pad_mode
-        self.lm_only = lm_only
+#         if device is None: device = 'cuda' if torch.cuda.is_available() else 'cpu'
+#         self.device = device
+#         self.pad_mode = pad_mode
+#         self.lm_only = lm_only
         
-        # luminance channel, difference of gaussians filter
-        self.size = size
-        self.sigma = sigma
-        self.sigmaRatio = sigmaRatio                
-        self.polarity = polarity # 0 => off-center unit
-        self.kernel1 = get_gaussian_kernel2d((size,size),(sigma,sigma)).unsqueeze(0)
-        self.kernel2 = get_gaussian_kernel2d((size,size),(sigma*sigmaRatio,sigma*sigmaRatio)).unsqueeze(0)
-        self.DoG = (self.kernel1 - self.kernel2) if polarity == 0 else (self.kernel2 - self.kernel1)
+#         # luminance channel, difference of gaussians filter
+#         self.size = size
+#         self.sigma = sigma
+#         self.sigmaRatio = sigmaRatio                
+#         self.polarity = polarity # 0 => off-center unit
+#         self.kernel1 = get_gaussian_kernel2d((size,size),(sigma,sigma)).unsqueeze(0)
+#         self.kernel2 = get_gaussian_kernel2d((size,size),(sigma*sigmaRatio,sigma*sigmaRatio)).unsqueeze(0)
+#         self.DoG = (self.kernel1 - self.kernel2) if polarity == 0 else (self.kernel2 - self.kernel1)
         
-    def __call__(self, x, replay=False):
+    # def __call__(self, x, replay=False):
         
-        if len(x.shape)==3:
-            x = x.unsqueeze(0)
+    #     if len(x.shape)==3:
+    #         x = x.unsqueeze(0)
         
-        # should be over L+M only?
-        if self.lm_only:
-            luminance = x[:,0:2,:,:].sum(dim=1,keepdims=True)
-        else:
-            luminance = x[:,0:3,:,:].sum(dim=1,keepdims=True)
-        OffCellResponse = kornia.filter2D(luminance, self.DoG, self.pad_mode)
-        OnCellResponse = -1.0 * OffCellResponse
-        OffCellResponse[OffCellResponse < 0] = 0
-        OnCellResponse[OnCellResponse < 0] = 0
+    #     # should be over L+M only?
+    #     if self.lm_only:
+    #         luminance = x[:,0:2,:,:].sum(dim=1,keepdims=True)
+    #     else:
+    #         luminance = x[:,0:3,:,:].sum(dim=1,keepdims=True)
+    #     OffCellResponse = kornia.filter2D(luminance, self.DoG, self.pad_mode)
+    #     OnCellResponse = -1.0 * OffCellResponse
+    #     OffCellResponse[OffCellResponse < 0] = 0
+    #     OnCellResponse[OnCellResponse < 0] = 0
                 
-        out = torch.cat([OnCellResponse, OffCellResponse], dim=1)
+    #     out = torch.cat([OnCellResponse, OffCellResponse], dim=1)
         
-        return relu(out.squeeze())
+    #     return relu(out.squeeze())
 
-    def __repr__(self):
-        format_string = self.__class__.__name__ + f'(size={self.size}'
-        format_string += ', sigma={0:3.3f}'.format(self.sigma)
-        format_string += ', sigmaRatio={0:3.3f}'.format(self.sigmaRatio)
-        format_string += f", device='{self.device}'"
-        format_string += ')'
-        return format_string
+    # def __repr__(self):
+    #     format_string = self.__class__.__name__ + f'(size={self.size}'
+    #     format_string += ', sigma={0:3.3f}'.format(self.sigma)
+    #     format_string += ', sigmaRatio={0:3.3f}'.format(self.sigmaRatio)
+    #     format_string += f", device='{self.device}'"
+    #     format_string += ')'
+    #     return format_string
     
-class LMS_To_LGN_Color(object):
+# class LMS_To_LGN_Color(object):
     
-    def __init__(self, oppSize=21, oppCenterSigma=2.5, oppSurroundSigma=2.5*1.57,
-                 pad_mode='reflect', device=None):
-        super().__init__()
+#     def __init__(self, oppSize=21, oppCenterSigma=2.5, oppSurroundSigma=2.5*1.57,
+#                  pad_mode='reflect', device=None):
+#         super().__init__()
         
-        if device is None: device = 'cuda' if torch.cuda.is_available() else 'cpu'
-        self.device = device
-        self.pad_mode = pad_mode
+#         if device is None: device = 'cuda' if torch.cuda.is_available() else 'cpu'
+#         self.device = device
+#         self.pad_mode = pad_mode
 
-        # center, surround gaussians for computing single-opponent color responses
-        self.oppSize = oppSize
-        self.oppCenterSigma = oppCenterSigma
-        self.oppSurroundSigma = oppSurroundSigma
-        self.oppCenter = get_gaussian_kernel2d((oppSize,oppSize),(oppCenterSigma,oppCenterSigma)).unsqueeze(0)
-        self.oppSurround = get_gaussian_kernel2d((oppSize,oppSize),(oppSurroundSigma,oppSurroundSigma)).unsqueeze(0)
+#         # center, surround gaussians for computing single-opponent color responses
+#         self.oppSize = oppSize
+#         self.oppCenterSigma = oppCenterSigma
+#         self.oppSurroundSigma = oppSurroundSigma
+#         self.oppCenter = get_gaussian_kernel2d((oppSize,oppSize),(oppCenterSigma,oppCenterSigma)).unsqueeze(0)
+#         self.oppSurround = get_gaussian_kernel2d((oppSize,oppSize),(oppSurroundSigma,oppSurroundSigma)).unsqueeze(0)
         
-    def __call__(self, x, replay=False):
+#     def __call__(self, x, replay=False):
         
-        if len(x.shape)==3:
-            x = x.unsqueeze(0)
+#         if len(x.shape)==3:
+#             x = x.unsqueeze(0)
         
-        # single opponent, center minus surround
-        c = kornia.filter2D(x, self.oppCenter, self.pad_mode)
-        s = kornia.filter2D(x, self.oppSurround, self.pad_mode)
-        Lp_Mn = c[:,0:1,:,:] - s[:,1:2,:,:] # L+/M-
-        Mp_Ln = c[:,1:2,:,:] - s[:,0:1,:,:] # M+/L-
-        Sp_LMn = c[:,2:3,:,:] - (s[:,0:1,:,:]*.5 + s[:,1:2,:,:]*.5) # S+/(L+M)- with L+M averaged
-        LMp_Sn = (c[:,0:1,:,:]*.5 + c[:,1:2,:,:]*.5) - s[:,2:3,:,:] # (L+M)+/S-
+#         # single opponent, center minus surround
+#         c = kornia.filter2D(x, self.oppCenter, self.pad_mode)
+#         s = kornia.filter2D(x, self.oppSurround, self.pad_mode)
+#         Lp_Mn = c[:,0:1,:,:] - s[:,1:2,:,:] # L+/M-
+#         Mp_Ln = c[:,1:2,:,:] - s[:,0:1,:,:] # M+/L-
+#         Sp_LMn = c[:,2:3,:,:] - (s[:,0:1,:,:]*.5 + s[:,1:2,:,:]*.5) # S+/(L+M)- with L+M averaged
+#         LMp_Sn = (c[:,0:1,:,:]*.5 + c[:,1:2,:,:]*.5) - s[:,2:3,:,:] # (L+M)+/S-
                 
-        out = torch.cat([Lp_Mn, Mp_Ln, 
-                         Sp_LMn, LMp_Sn], dim=1)
+#         out = torch.cat([Lp_Mn, Mp_Ln, 
+#                          Sp_LMn, LMp_Sn], dim=1)
         
-        return relu(out.squeeze())
+#         return relu(out.squeeze())
 
-    def __repr__(self):
-        format_string = self.__class__.__name__ 
-        format_string += ', oppSize={0}'.format(self.oppSize)
-        format_string += ', oppCenterSigma={0:3.3f}'.format(self.oppCenterSigma)
-        format_string += ', oppSurroundSigma={0:3.3f}'.format(self.oppSurroundSigma)
-        format_string += f", device='{self.device}'"
-        format_string += ')'
-        return format_string 
+#     def __repr__(self):
+#         format_string = self.__class__.__name__ 
+#         format_string += ', oppSize={0}'.format(self.oppSize)
+#         format_string += ', oppCenterSigma={0:3.3f}'.format(self.oppCenterSigma)
+#         format_string += ', oppSurroundSigma={0:3.3f}'.format(self.oppSurroundSigma)
+#         format_string += f", device='{self.device}'"
+#         format_string += ')'
+#         return format_string 
         
-# =================================================
-#  Custom Albumentation Style Transforms
-# ================================================= 
+# # =================================================
+# #  Custom Albumentation Style Transforms
+# # ================================================= 
 
-class CenterCropResize(AT.DualTransform):
-    """CenterCropResize
+# class CenterCropResize(AT.DualTransform):
+#     """CenterCropResize
     
-        Center Crop and Resize a HxWxC Numpy Array.
+#         Center Crop and Resize a HxWxC Numpy Array.
         
-    """
-    def __init__(self, width, height, crop_width, crop_height, 
-                 interpolation=cv2.INTER_LINEAR, always_apply=False, p=1.0):
-        '''
-            width, height: final output height in pixels
-            crop_width, crop_height: pct of original width and height to crop
-        '''
-        super(CenterCropResize, self).__init__(always_apply, p)
-        #self.p = p
-        self.width = width
-        self.height = height
-        self.crop_width = crop_width
-        self.crop_height = crop_height
-        self.interpolation = interpolation
-        #self.always_apply = always_apply
+#     """
+#     def __init__(self, width, height, crop_width, crop_height, 
+#                  interpolation=cv2.INTER_LINEAR, always_apply=False, p=1.0):
+#         '''
+#             width, height: final output height in pixels
+#             crop_width, crop_height: pct of original width and height to crop
+#         '''
+#         super(CenterCropResize, self).__init__(always_apply, p)
+#         #self.p = p
+#         self.width = width
+#         self.height = height
+#         self.crop_width = crop_width
+#         self.crop_height = crop_height
+#         self.interpolation = interpolation
+#         #self.always_apply = always_apply
         
-#         self.h_start = None
-#         self.w_start = None
-#         self._additional_targets = {}
+# #         self.h_start = None
+# #         self.w_start = None
+# #         self._additional_targets = {}
         
-#         # replay mode params
-#         self.deterministic = False
-#         self.save_key = "replay"
-#         self.params = {}
-#         self.replay_mode = False
-#         self.applied_in_replay = False
+# #         # replay mode params
+# #         self.deterministic = False
+# #         self.save_key = "replay"
+# #         self.params = {}
+# #         self.replay_mode = False
+# #         self.applied_in_replay = False
         
     def get_params_dependent_on_targets(self, params):        
         img = params["image"]

@@ -5,15 +5,9 @@ from torch.utils.data.dataloader import _SingleProcessDataLoaderIter, _MultiProc
 from torch.utils.data._utils.collate import default_collate_err_msg_format, np_str_obj_array_pattern
 from PIL import Image
 from pdb import set_trace
-
-try:
-    from torch._six import container_abcs, string_classes, int_classes
-except:
-    # some issue with torch v1.9
-    import collections.abc as container_abcs 
-    from torch._six import string_classes
-    int_classes = int
-    
+import collections.abc as container_abcs
+int_classes = int
+string_classes = str
 try:
     from fastcore.foundation import delegates
 except:
@@ -51,7 +45,7 @@ class FastLoader(DataLoader):
         """
         
         elem = batch[0]
-        elem_type = type(elem)
+        elem_type = type(elem)  
         if isinstance(elem, torch.Tensor):
             out = None
             if torch.utils.data.get_worker_info() is not None:

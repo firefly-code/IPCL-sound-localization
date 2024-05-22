@@ -15,7 +15,7 @@ from torch.nn.functional import grid_sample, conv2d, interpolate, pad as torch_p
 from torch.jit.annotations import BroadcastingList2
 from typing import Optional, Tuple, List
 from pdb import set_trace
-import kornia
+# import kornia
 import math
 
 M_PI = math.pi
@@ -377,8 +377,8 @@ def color_jitter_kornia(img: Tensor, hue_factor: float, saturation_factor: float
     if saturation_factor is not None:
         img = adjust_saturation(img, saturation_factor)        
     
-    if hue_factor is not None:
-        img = kornia.adjust_hue(img, hue_factor)
+    # if hue_factor is not None:
+    #     img = kornia.adjust_hue(img, hue_factor)
                 
     return img
 

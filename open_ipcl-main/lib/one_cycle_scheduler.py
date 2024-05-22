@@ -1,9 +1,11 @@
 from numbers import Number
+from pathlib import Path
 from typing import Any, AnyStr, Callable, Collection, Dict, Hashable, Iterator, List, Mapping, NewType, Optional
 from typing import Sequence, Tuple, TypeVar, Union
 from types import SimpleNamespace
 from abc import abstractmethod, abstractproperty
-from collections import abc,  Counter, defaultdict, Iterable, namedtuple, OrderedDict
+from collections import abc,  Counter, defaultdict, namedtuple, OrderedDict
+from collections.abc import Iterable
 from IPython.core.debugger import set_trace
 from torch import nn, optim, as_tensor
 import numpy as np
@@ -11,7 +13,7 @@ import numpy as np
 def is_listy(x:Any)->bool: return isinstance(x, (tuple,list))
 def is_tuple(x:Any)->bool: return isinstance(x, tuple)
 def is_dict(x:Any)->bool: return isinstance(x, dict)
-def is_pathlike(x:Any)->bool: return isinstance(x, (str,Path))
+def is_pathlike(x:Any)->bool: return isinstance(x, (str, Path))
 def noop(x): return x
 
 AnnealFunc = Callable[[Number,Number,float], Number]
@@ -93,18 +95,18 @@ class Callback(object):
         if minimal: to_remove += getattr(self, 'not_min', []).copy()
         return {k:v for k,v in self.__dict__.items() if k not in to_remove}
 
-    def  __repr__(self):
-        attrs = func_args(self.__init__)
-        to_remove = getattr(self, 'exclude', [])
-        list_repr = [self.__class__.__name__] + [f'{k}: {getattr(self, k)}' for k in attrs if k != 'self' and k not in to_remove]
-        return '\n'.join(list_repr)
+    # def  __repr__(self):
+    #     attrs = func_args(self.__init__)
+    #     to_remove = getattr(self, 'exclude', [])
+    #     list_repr = [self.__class__.__name__] + [f'{k}: {getattr(self, k)}' for k in attrs if k != 'self' and k not in to_remove]
+    #     return '\n'.join(list_repr)
 
 class Scheduler():
     "Used to \"step\" from start,end (`vals`) over `n_iter` iterations on a schedule defined by `func`"
     def __init__(self, vals:StartOptEnd, n_iter:int, func:Optional[AnnealFunc]=None):
         self.start,self.end = (vals[0],vals[1]) if is_tuple(vals) else (vals,0)
         self.n_iter = max(1,n_iter)
-        if func is None: self.func = annealing_linear if is_tuple(vals) else annealing_no
+        if func is None: self.func = annealing_linear if is_tuple(vals) else None#annealing_no
         else:          self.func = func
         self.n = 0
         # set_trace()
@@ -300,19 +302,19 @@ class OneCycleSchedulerTau(Callback):
         if epoch > self.tot_epochs: return {'stop_training': True}
 
 
-def show_tau_schedule(tau_scheduler, num_epochs, num_batches):
-    epochs = []
-    tau = []
-    tau_scheduler.on_train_begin(epoch=0, n_epochs=num_epochs)
-    mb = master_bar(range(num_epochs))
-    for epoch in mb:
-        ts = []
-        for batch_no in progress_bar(range(num_batches), parent=mb):
-            ts.append(tau_scheduler.lemniscate.params[1].cpu().numpy().tolist())
-            tau_scheduler.on_batch_end(True)
-        epochs.append(epoch)
-        tau.append(np.mean(ts))
+# def show_tau_schedule(tau_scheduler, num_epochs, num_batches):
+#     epochs = []
+#     tau = []
+#     tau_scheduler.on_train_begin(epoch=0, n_epochs=num_epochs)
+#     mb = master_bar(range(num_epochs))
+#     for epoch in mb:
+#         ts = []
+#         for batch_no in progress_bar(range(num_batches), parent=mb):
+#             ts.append(tau_scheduler.lemniscate.params[1].cpu().numpy().tolist())
+#             tau_scheduler.on_batch_end(True)
+#         epochs.append(epoch)
+#         tau.append(np.mean(ts))
         
-    ax = sns.lineplot(x="epoch", y="tau", data={"epoch":epochs ,"tau": tau})
+#     ax = sns.lineplot(x="epoch", y="tau", data={"epoch":epochs ,"tau": tau})
 
-    return epochs, tau, ax        
+#     return epochs, tau, ax        

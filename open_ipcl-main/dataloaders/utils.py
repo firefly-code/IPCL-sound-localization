@@ -4,35 +4,36 @@ import torch.nn as nn
 from torchvision import transforms as T
 import numpy as np
 from PIL import Image
-from turbojpeg import TurboJPEG, TJPF, TJSAMP
+# from turbojpeg import TurboJPEG, TJPF, TJSAMP
 from urllib.request import urlopen
 import matplotlib.pyplot as plt
 import cv2
 from IPython.core.debugger import set_trace
 from .colormap import colormap
-
+import re 
+import csv
 try:
     from fastprogress.fastprogress import progress_bar
 except:
     from fastprogress import progress_bar
 
-turbo = TurboJPEG()
+# turbo = TurboJPEG()
 
 color_list = colormap()
 _GRAY = (218, 227, 218)
 _GREEN = (18, 127, 15)
 _WHITE = (255, 255, 255)
 
-# __all__ = ['turbo_loader', 'pil_loader', 'open_image', 'load_image_rgb']
+__all__ = ['pil_loader', 'open_image']
 
-TEST_IMAGE_URL = 'https://scorsese.wjh.harvard.edu/turk/stimuli/turbo/butterfly.jpg'
+#TEST_IMAGE_URL = 'https://scorsese.wjh.harvard.edu/turk/stimuli/turbo/butterfly.jpg'
 
-def turbo_loader(file, to_rgb=True):
-    with open(file, 'rb') as f:
-        # have to install latest to access crop features:
-        # buf = turbo.crop(f.read(), x=0, y=0, w=100, h=100, preserve=False, gray=True)
-        img = turbo.decode(f.read(), pixel_format=TJPF.RGB if to_rgb else TJPF.BGR)
-    return img
+# def turbo_loader(file, to_rgb=True):
+#     with open(file, 'rb') as f:
+#         # have to install latest to access crop features:
+#         # buf = turbo.crop(f.read(), x=0, y=0, w=100, h=100, preserve=False, gray=True)
+#         img = turbo.decode(f.read(), pixel_format=TJPF.RGB if to_rgb else TJPF.BGR)
+#     return img
 
 def pil_loader(path):
     # open path as file to avoid ResourceWarning (https://github.com/python-pillow/Pillow/issues/835)
@@ -46,69 +47,89 @@ def cv2_loader(path, to_rgb=True):
     
     return img
 
-def open_image(p, to_rgb=True):
-    '''Our default image loader, takes `filename` and returns a PIL Image. 
-        Speedwise, turbo_loader > pil_loader > cv2, but cv2 is the most robust, so 
-        we try to load jpg images with turbo_loader, fall back to PIL, then cv2.
+def open_image(p):
+    # '''Our default image loader, takes `filename` and returns a PIL Image. 
+    #     Speedwise, turbo_loader > pil_loader > cv2, but cv2 is the most robust, so 
+    #     we try to load jpg images with turbo_loader, fall back to PIL, then cv2.
         
-        This fallback behavior is needed, e.g., with ImageNet there are a few images
-        that either aren't JPEGs or have issues that turbo_loader crashes on, but cv2 
-        doesn't.
-    '''
-    if p.lower().endswith('.jpg') or p.lower().endswith('.jpeg'): 
-        try:
-            img = turbo_loader(p, to_rgb=to_rgb)
-        except:
-            try:
-                img = pil_loader(p)
-            except:
-                img = cv2.imread(p)
-                if to_rgb: img = img[:,:,::-1]
-    else:
-        try:
-            img = pil_loader(p)
-        except:
-            img = cv2.imread(p)
-            if to_rgb: img = img[:,:,::-1]
+    #     This fallback behavior is needed, e.g., with ImageNet there are a few images
+    #     that either aren't JPEGs or have issues that turbo_loader crashes on, but cv2 
+    #     doesn't.
+    # '''
+    # if p.lower().endswith('.jpg') or p.lower().endswith('.jpeg'): 
+    #     try:
+    #         img = turbo_loader(p, to_rgb=to_rgb)
+    #     except:
+    #         try:
+    #             img = pil_loader(p)
+    #         except:
+    #             img = cv2.imread(p)
+    #             if to_rgb: img = img[:,:,::-1]
+    # else:
+    #     try:
+    #         img = pil_loader(p)
+    #     except:
+    #         img = cv2.imread(p)
+    #         if to_rgb: img = img[:,:,::-1]
                 
-    if img is not None and not isinstance(img, Image.Image):
-        img = Image.fromarray(img)
+    # if img is not None and not isinstance(img, Image.Image):
+    #     img = Image.fromarray(img)
+    img = np.load(str(p))['arr_0']
         
     return img
 
-def open_image_array(p, to_rgb=True):
-    '''Our default image loader, takes `filename` and returns a PIL Image. 
-        Speedwise, turbo_loader > pil_loader > cv2, but cv2 is the most robust, so 
-        we try to load jpg images with turbo_loader, fall back to PIL, then cv2.
+def open_image_array(p):
+    # '''Our default image loader, takes `filename` and returns a PIL Image. 
+    #     Speedwise, turbo_loader > pil_loader > cv2, but cv2 is the most robust, so 
+    #     we try to load jpg images with turbo_loader, fall back to PIL, then cv2.
         
-        This fallback behavior is needed, e.g., with ImageNet there are a few images
-        that either aren't JPEGs or have issues that turbo_loader crashes on, but cv2 
-        doesn't.
-    '''
-    if p.lower().endswith('.jpg') or p.lower().endswith('.jpeg'): 
-        try:
-            img = turbo_loader(p, to_rgb=to_rgb)
-        except:
-            try:
-                img = np.array(pil_loader(p))
-            except:
-                img = cv2.imread(p)
-                if to_rgb: img = img[:,:,::-1]
-    else:
-        try:
-            img = pil_loader(p)
-        except:
-            img = cv2.imread(p)
-            if to_rgb: img = img[:,:,::-1]                
+    #     This fallback behavior is needed, e.g., with ImageNet there are a few images
+    #     that either aren't JPEGs or have issues that turbo_loader crashes on, but cv2 
+    #     doesn't.
+    # '''
+    # if p.lower().endswith('.jpg') or p.lower().endswith('.jpeg'): 
+    #     try:
+    #         img = turbo_loader(p, to_rgb=to_rgb)
+    #     except:
+    #         try:
+    #             img = np.array(pil_loader(p))
+    #         except:
+    #             img = cv2.imread(p)
+    #             if to_rgb: img = img[:,:,::-1]
+    # else:
+    #     try:
+    #         img = pil_loader(p)
+    #     except:
+    #         img = cv2.imread(p)
+    #         if to_rgb: img = img[:,:,::-1]     
+    
+    ### revised loader returns a numpy array as the image.
+    
+    img = np.load(str(p))['arr_0']
+    # image_torch = torch.from_numpy(image).float()
+    # image_torch = image_torch
+    # pattern = r"Az_(?P<azimuth>-?\d+)_El_(?P<elevation>-?\d+)"
+    # labelData = re.search(pattern, str(p))
+    # azimuth = int(labelData.group('azimuth'))
+    # elevation = int(labelData.group('elevation'))
+    # label = 0
+    # with open('labels.csv', 'rt') as f:
+    #     reader = csv.reader(f, delimiter=',') 
+    #     for row in reader:
+    #         if(int(row[0])==azimuth and int(row[1])==elevation):
+    #             label = row[2]
+    #             break
+    # label = torch.from_numpy(np.array(int(label)))
+    # label = label.cuda()
         
     return img
 
-def download_image(url):
-    data = urlopen(url).read()
-    data = np.frombuffer(data, np.uint8)
-    img = turbo.decode(data, pixel_format=TJPF.RGB)
-    img = Image.fromarray(img)
-    return img
+# def download_image(url):
+#     data = urlopen(url).read()
+#     data = np.frombuffer(data, np.uint8)
+#     img = turbo.decode(data, pixel_format=TJPF.RGB)
+#     img = Image.fromarray(img)
+#     return img
 
 def hasattrs(o,attrs):
     "from fastai2/torch_core.py, Test whether `o` contains all `attrs`"
