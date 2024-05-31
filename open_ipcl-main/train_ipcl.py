@@ -231,7 +231,7 @@ def get_transforms_custom(image_size=256, crop_size=224, n_samples=5, device=Non
     return before_batch, after_batch
 
 def main():
-    args = args = Dict({
+    args = Dict({
     "data": 'Data/DataIPCL',
     "out_dir": "Results",
     "arch": "ResNet34",
@@ -251,10 +251,10 @@ def main():
     "multiprocessing_distributed":False,
     "opt":"SGD",
     "use_lars":0,
-    "lr":0.001,
+    "lr":0.0001,
     "momentum":0.9,
     "wd":0.005,
-    "batch_multiplier":20,
+    "batch_multiplier":1,
     "scheduler":'CosineAnnealing',
     "schedule":[120, 160],
     "div_factor":1000,
@@ -263,7 +263,7 @@ def main():
     "tau_scheduler_start_val": 0.1,
     "tau_scheduler_end_val": 0.01,
     "ipcl_dim":32,
-    "ipcl_k":1024,
+    "ipcl_k":150,
     "ipcl_t":0.7,
     "ipcl_n":5,
 
@@ -414,7 +414,7 @@ def main_worker(gpu, ngpus_per_node, args):
         train_dataset, 
         after_batch=None, 
         batch_size=args.batch_size, 
-        shuffle=(train_sampler is None), 
+        shuffle=True, 
         num_workers=args.num_workers, 
         pin_memory=True, 
         sampler=train_sampler, 
@@ -439,12 +439,12 @@ def main_worker(gpu, ngpus_per_node, args):
     ])
         
     train_dataset = ImageFolderInstanceSamples(
-        paths=paths_train, n_samples=1
+        paths=paths_train, n_samples=5
     )
     print(train_dataset)
 
     val_dataset = ImageFolderInstanceSamples(
-        paths=paths_val, n_samples=1
+        paths=paths_val, n_samples=5
     )
     print(val_dataset)
 
@@ -711,7 +711,6 @@ def train(epoch, learner, optimizer, train_loader, args, batch_multiplier=1.,
     
         #optimizer.zero_grad()
         loss, (embeddings, prototypes) = learner(inputs, targs)
-        print(loss)
         loss = loss / float(batch_multiplier)
         losses.update(loss.item(), 1)
         loss.backward()

@@ -24,7 +24,7 @@ class CochleagramLoader(Dataset):
     def __getitem__(self, idx):
         image = np.load(str(self.coch_dir[idx]))['arr_0']
         image_torch = torch.from_numpy(image).float()
-        image_torch = image_torch
+        image_torch = image_torch.cuda()
         pattern = r"Az_(?P<azimuth>-?\d+)_El_(?P<elevation>-?\d+)"
         labelData = re.search(pattern, str(self.coch_dir[idx]))
         azimuth = int(labelData.group('azimuth'))
@@ -37,12 +37,12 @@ class CochleagramLoader(Dataset):
                     label = row[2]
                     break
         label = torch.from_numpy(np.array(int(label)))
-        label = label.cuda()
+        label = label
         if self.transform:
             image_torch = self.transform(image_torch)
         if self.target_transform:
             label = self.target_transform(label)
-        return image_torch, label
+        return image_torch, label.cuda()
 
 
 class block(nn.Module):
@@ -274,7 +274,7 @@ def RunTraining():
     
     epoch_number = 0
 
-    EPOCHS = 2534
+    EPOCHS = 30
 
     best_vloss = 1_000_000.
 
@@ -320,19 +320,24 @@ def RunTraining():
 
         epoch_number += 1
 def RunTestSet():
-    model = ResNet34(sound_channel=2, num_classes=190).to('cpu')
-    model.load_state_dict(torch.load("model_20240509_003608_24"))
-    model.eval()
-    y_vs_yhat = []
-    dataset_val = CochleagramLoader(list(Path("Data/Val").glob('*.npz')))
-    validation_dataloader = DataLoader(dataset_val, batch_size=1, shuffle=True)
-    for image,label in list(validation_dataloader):
-        with torch.no_grad():
-          pred = model(image)
-          _, predictionV = torch.max(pred.data,1)
-          y_vs_yhat.append([label.cpu().numpy(),predictionV.cpu().numpy()])
-    np.save("val_data2",np.array(y_vs_yhat))
-        
+    with torch.no_grad():
+        model = ResNet34(sound_channel=2, num_classes=190).to('cuda')
+        model.load_state_dict(torch.load("model_20240523_181050_28"))
+        model.eval()
+        y_vs_yhat = []
+        dataset_val = CochleagramLoader(list(Path("Data/Val").glob('*.npz')))
+        validation_dataloader = DataLoader(dataset_val, batch_size=1, shuffle=True)
+        print(torch.cuda.memory_allocated())
+        for i, data in enumerate(validation_dataloader):
+            image,label=data
+            pred = model(image)
+            _, predictionV = torch.max(pred.data,1)
+            print(torch.cuda.memory_allocated())
+            y_vs_yhat.append([label.cpu().numpy(),predictionV.cpu().numpy()])
+            print(torch.cuda.memory_allocated())
+            torch.cuda.empty_cache()
+        np.save("val_data5",np.array(y_vs_yhat))
+            
 
 if __name__ == "__main__":
     #RunTraining()

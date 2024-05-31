@@ -133,6 +133,7 @@ def run_kNN(model, train_loader, test_loader, layer_name, K=200, sigma=.07, num_
     
     print(f"run_kNN accuracy: top1={top1}, top5={top5}")
     
+    
     return top1, top5
 
 def gen_features(model, dataloader, layer_name, device=None, out_device=None):    
