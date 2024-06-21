@@ -7,6 +7,7 @@ import csv
 from sklearn import preprocessing
 from scipy.ndimage import gaussian_filter
 from sklearn.metrics import confusion_matrix
+from sklearn.datasets import make_blobs
 import seaborn as sns
 import pandas as pd
 from pathlib import Path
@@ -391,7 +392,7 @@ def tsne_plot_ipcl(data):
     data = torch.load(data)
     print(data.keys())
     label_azi_ele=[]
-    values_to_match = [4,0,9]
+    values_to_match = [90,94,99]
     with open('labels.csv', 'rt') as f:
         reader = csv.reader(f, delimiter=',') 
         for row in reader:
@@ -412,22 +413,60 @@ def tsne_plot_ipcl(data):
     print(X.shape)
     tsne = TSNE(n_components=2,perplexity=45)
     X_tsne = tsne.fit_transform(X)
+    hue_order = [('0', '-45'),('0', '0'),('0', '60')]
     
     plt.figure(figsize=(10, 8))
-    sns.scatterplot(x=X_tsne[:, 0], y=X_tsne[:, 1], hue=labels, palette='viridis', s=100, alpha=0.7, edgecolor='k')
-    plt.title('t-SNE Plot')
+    sns.scatterplot(x=X_tsne[:, 0], y=X_tsne[:, 1], hue=labels,hue_order=hue_order, palette='viridis', s=100, alpha=0.75, edgecolor='k')
+    plt.title('t-SNE Plot Elevation CA Epoch 3')
+    plt.xlabel('t-SNE Feature 1')
+    plt.ylabel('t-SNE Feature 2')
+    plt.legend()
+    
+def tsne_plot_ipcl_fake():
+    labeling= {0: ('270', '-45'), 1: ('270', '0'), 2: ('270', '60'), 3: ('0', '-45'), 4: ('0', '0'), 5: ('0', '60'), 6: ('90', '-45'), 7: ('90', '0'), 8: ('90', '60')}
+    X, Y = make_blobs(n_samples=4049, n_features=32, centers=9, cluster_std=7  )
+    labels = [labeling[int(key)] for key in Y]
+    print(Y)
+    print(X.shape)
+    tsne = TSNE(n_components=2,perplexity=30)
+    X_tsne = tsne.fit_transform(X)
+    plt.figure(figsize=(10, 8))
+    sns.scatterplot(x=X_tsne[:, 0], y=X_tsne[:, 1], hue=labels, palette='tab20', s=100, alpha=0.7, edgecolor='k')
+    plt.title('Hypothesised t-SNE Plot')
     plt.xlabel('t-SNE Feature 1')
     plt.ylabel('t-SNE Feature 2')
     plt.legend()
   
     
-def general_x_y_graphs_IPCL(data):
+def general_x_y_graphs_IPCL_acc(data,data2):
     result= torch.load(data)['perf_monitor']
-    title = "Training Loss"
-    train_loss = np.array(result['train_loss'])
+    result2= torch.load(data2)['perf_monitor']
+    title = "KNN top1 Accuracy IPCL "
+    train_loss = np.array(result['top1'])
+    train_loss2 = np.array(result2['top1'])
     steps = np.array(result['epoch'])+1
     plt.figure(figsize=(10, 6))
-    plt.plot(steps, train_loss, alpha=1, color ='purple',label="Training loss")
+    plt.plot(steps, train_loss, alpha=0.8, color ='purple',label="lr: 0.001")
+    plt.plot(steps, train_loss2, alpha=0.9, color ='green',label="lr: Cosine Annealing")
+    plt.axhline(y=0.5, color='r', linestyle='--', label='Baseline Accuracy')
+    plt.xlabel('Epoch')
+    plt.ylabel('Accuracy')
+    plt.title(title)
+    plt.grid(True)
+    plt.legend()
+    plt.savefig(f'Data/ImagesOfResultGraphs/{title}.png')
+    plt.show()
+    
+def general_x_y_graphs_IPCL_Loss(data,data2):
+    result= torch.load(data)['perf_monitor']
+    result2= torch.load(data2)['perf_monitor']
+    title = "Validation Loss IPCL "
+    train_loss = np.array(result['val_loss'])
+    train_loss2 = np.array(result2['val_loss'])
+    steps = np.array(result['epoch'])+1
+    plt.figure(figsize=(10, 6))
+    plt.plot(steps, train_loss, alpha=0.8, color ='purple',label="lr: 0.001")
+    plt.plot(steps, train_loss2, alpha=0.9, color ='green',label="lr: Cosine Annealing")
     plt.xlabel('Epoch')
     plt.ylabel('Loss')
     plt.title(title)
@@ -435,8 +474,6 @@ def general_x_y_graphs_IPCL(data):
     plt.legend()
     plt.savefig(f'Data/ImagesOfResultGraphs/{title}.png')
     plt.show()
-    
-    
     
 def IPCL(data):
     result= torch.load(data)
@@ -495,11 +532,12 @@ def bar_accuracy():
 #spherePlotConfusionElevation(data)
 # spherePlotConfusionAzimuth(data)
 # plt.show()
-#IPCL("results/ipcl0_ResNet18_SGD_CosineAnnealing_lars0_bs10_bm_16_ep20_out32_k512_n5_t0.7_lr0.0001.pth.tar")
-general_x_y_graphs_IPCL("results/ipcl0_ResNet18_SGD_None_lars0_bs10_bm_16_ep20_out32_k512_n5_t0.7_lr0.001.pth.tar", "results/ipcl0_ResNet18_SGD_None_lars0_bs10_bm_16_ep20_out32_k512_n5_t0.7_lr0.001.pth.tar")
-#tsne_plot_ipcl("results/ipcl0_ResNet18_SGD_CosineAnnealing_lars0_bs10_bm_16_ep20_out32_k512_n5_t0.7_lr0.0001.pth.tarcosine_embeddings_EP0")
+# IPCL("results/ipcl0_ResNet18_SGD_CosineAnnealing_lars0_bs10_bm_16_ep20_out32_k512_n5_t0.7_lr0.0001.pth.tar")
+general_x_y_graphs_IPCL_Loss("results/ipcl0_ResNet18_SGD_None_lars0_bs10_bm_16_ep20_out32_k512_n5_t0.7_lr0.001.pth.tar", 'results/ipcl0_ResNet18_SGD_CosineAnnealing_lars0_bs10_bm_16_ep20_out32_k512_n5_t0.7_lr0.0001.pth.tar')
+# tsne_plot_ipcl("results/ipcl0_ResNet18_SGD_CosineAnnealing_lars0_bs10_bm_16_ep20_out32_k512_n5_t0.7_lr0.0001.pth.tarcosine_embeddings_EP0")
 # tsne_plot_ipcl("results/ipcl0_ResNet18_SGD_CosineAnnealing_lars0_bs10_bm_16_ep20_out32_k512_n5_t0.7_lr0.0001.pth.tarcosine_embeddings_EP2")
-#tsne_plot_ipcl("results/ipcl0_ResNet18_SGD_CosineAnnealing_lars0_bs10_bm_16_ep20_out32_k512_n5_t0.7_lr0.0001.pth.tarcosine_embeddings_EP19")
+# tsne_plot_ipcl_fake()
+# tsne_plot_ipcl("results/ipcl0_ResNet18_SGD_CosineAnnealing_lars0_bs10_bm_16_ep20_out32_k512_n5_t0.7_lr0.0001.pth.tarcosine_embeddings_EP19")
 plt.show()
 
 
