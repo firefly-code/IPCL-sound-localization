@@ -16,6 +16,7 @@ import torch
 import torchaudio
 from df.enhance import enhance, init_df, load_audio, save_audio 
 import noisereduce as nr
+import random
 
 import librosa
 
@@ -96,6 +97,7 @@ def training(dataset):
         fileNum = re.findall(r'\d+',file)
         if int(fileNum[-1]) <11:
             shutil.copyfile(os.path.join(dataset, file),os.path.join("ESC-50-master/training", file))
+            
 
             
 def test(dataset):
@@ -111,8 +113,7 @@ def renameRemove1(dataset):
         os.rename(original_file_path,new_file_path)
         
 def dataset_to_ImageFolder(path):
-    destination = "Data/DataIPCL/ImageFolderDatasetTrainNew"
-    i = 0
+    destination = "Data/DataIPCL/ImageFolderDatasetValFull"
     if not os.path.exists(destination):
         os.makedirs(destination)
     for filename in os.listdir(path):
@@ -121,20 +122,51 @@ def dataset_to_ImageFolder(path):
         azimuth = int(match.group('azimuth'))
         elevation = int(match.group('elevation'))
         if match:
-            classlabel = f"{i}_position_{azimuth}_{elevation}"
+            classlabel = f"position_{azimuth}_{elevation}"
             classdir = os.path.join(destination,f"class_{classlabel}")
             if not os.path.exists(classdir):
                 os.makedirs(classdir)
-                i=i+1
-                
+        
             source = os.path.join(path, filename)
             destination_new = os.path.join(classdir, filename)
-            shutil.move(source, destination_new)
+            shutil.copy(source, destination_new)
 
 def add_label_to_class_dir(path):
     for i,dir in enumerate(os.listdir(path)):
-        os.rename(os.path.join(path,dir),os.path.join(path,f"{i}_{dir}"))
-    
+        pattern = r"_(?P<azimuth>-?\d+)_(?P<elevation>-?\d+)"
+        match = re.search(pattern,dir)
+        with open('labels.csv', 'rt') as f:
+            reader = csv.reader(f, delimiter=',') 
+            for row in reader:
+                if(int(row[0])==int(match.group('azimuth')) and int(row[1])==int(match.group('elevation'))):
+                    label = row[2]
+        os.rename(os.path.join(path,dir),os.path.join(path,f"{label}_{dir}"))
+        
+def split_dataset_90_10(folderpath):
+    paths = os.listdir(folderpath)
+    for path in paths:
+        path = os.path.join(folderpath,path)
+        for i in range(50):
+            file = random.choice(os.listdir(path))
+            source = os.path.join(path,file)
+            destination_new = os.path.join("Data/Val",file)
+            shutil.move(source, destination_new)
+            
+def remove_common(pathTrain, pathVal):
+    train_folder = pathTrain
+    val_folder = pathVal
+
+    # List all files in both folders
+    train_files = set(os.listdir(train_folder))
+    val_files = set(os.listdir(val_folder))
+
+    # Find common files in both folders
+    common_files = train_files.intersection(val_files)
+
+    # Delete common files from the train folder
+    for file_name in common_files:
+        train_file_path = os.path.join(train_folder, file_name)
+        os.remove(train_file_path)
 #renameRemove1("ESC-50-master/test")
 #test("ESC-50-master/audio1s")
 #training("ESC-50-master/audio1s")
@@ -154,8 +186,7 @@ def add_label_to_class_dir(path):
 
 # test = np.load('ESC-50-master/Cochleagrams_PaulZimmer/Room_01_RT60_1.0_gx_1.5_gy_3.5_gz_1.5_Az_000_El_020_urban_train_5/arr_0.npy')
 # print(test.shape)
-add_label_to_class_dir("Data/DataIPCL/ImageFolderDatasetVal")
-
-
-
-                
+dataset_to_ImageFolder("Data/Val")
+add_label_to_class_dir("Data/DataIPCL/ImageFolderDatasetValFull")
+#split_dataset_90_10("Data/DataIPCL/ImageFolderDatasetTrainFull")
+#remove_common("Data/Train","Data/Val")

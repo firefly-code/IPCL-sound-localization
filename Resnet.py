@@ -23,6 +23,7 @@ class CochleagramLoader(Dataset):
 
     def __getitem__(self, idx):
         image = np.load(str(self.coch_dir[idx]))['arr_0']
+        #image = np.flip(axis=0)
         image_torch = torch.from_numpy(image).float()
         image_torch = image_torch.cuda()
         pattern = r"Az_(?P<azimuth>-?\d+)_El_(?P<elevation>-?\d+)"
@@ -241,7 +242,7 @@ def train_one_epoch(epoch_index, tb_writer,train_dataloader,optimizer,model,loss
 
 def RunTraining():
     
-    net = ResNet34(sound_channel=2, num_classes=190).to('cuda')
+    net = ResNet18(sound_channel=2, num_classes=190).to('cuda')
     
     learning_rate = 0.01
     dataset_train = CochleagramLoader(list(Path("Data/Train").glob('*.npz')))
@@ -321,8 +322,8 @@ def RunTraining():
         epoch_number += 1
 def RunTestSet():
     with torch.no_grad():
-        model = ResNet34(sound_channel=2, num_classes=190).to('cuda')
-        model.load_state_dict(torch.load("model_20240523_181050_28"))
+        model = ResNet18(sound_channel=2, num_classes=190).to('cuda')
+        model.load_state_dict(torch.load("model_20240606_215258_26"))
         model.eval()
         y_vs_yhat = []
         dataset_val = CochleagramLoader(list(Path("Data/Val").glob('*.npz')))
@@ -336,8 +337,7 @@ def RunTestSet():
             y_vs_yhat.append([label.cpu().numpy(),predictionV.cpu().numpy()])
             print(torch.cuda.memory_allocated())
             torch.cuda.empty_cache()
-        np.save("val_data5",np.array(y_vs_yhat))
-            
+        np.save("test_data_Resnet18_30Epochs",np.array(y_vs_yhat))
 
 if __name__ == "__main__":
     #RunTraining()

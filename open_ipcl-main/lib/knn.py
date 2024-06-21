@@ -77,7 +77,7 @@ def do_kNN(trainFeatures, trainLabels, testFeatures, testLabels, C, K, sigma, de
     
     return top1, top5, total
 
-def repeated_kfold_kNN(model, dataloader, layer_name, K=40, sigma=.07, n_splits=5, n_repeats=5, 
+def repeated_kfold_kNN(model, dataloader, layer_name, K=25, sigma=.07, n_splits=5, n_repeats=5, 
                        random_state=123456, epoch=None):
     
     print("\n================================")
@@ -110,7 +110,7 @@ def repeated_kfold_kNN(model, dataloader, layer_name, K=40, sigma=.07, n_splits=
     print(f"Average Top1 % = {TOP1.mean():4.2f}%, Top5 = {TOP5.mean():4.2f}%")
     return TOP1, TOP5
 
-def run_kNN(model, train_loader, test_loader, layer_name, K=200, sigma=.07, num_chunks=200, out_device=None):
+def run_kNN(model, train_loader, test_loader, layer_name, K=25, sigma=.07, num_chunks=10, out_device=None):
     print("extracting training features...")
     trainFeatures, trainLabels, indexes = get_features(model, train_loader, layer_name, out_device=out_device)
     print("extracting test features...")
@@ -157,7 +157,7 @@ def gen_features(model, dataloader, layer_name, device=None, out_device=None):
             yield X.to(out_device), targs.to(out_device), idxs.to(out_device)
     
 
-def run_kNN_chunky(model, train_loader, test_loader, layer_name, K=200, sigma=.07, num_chunks=10, out_device=None):
+def run_kNN_chunky(model, train_loader, test_loader, layer_name, K=25, sigma=.07, num_chunks=10, out_device=None):
     '''this version scales better to larger feature spaces
     
         we compute the full testFeatures, testLabels,

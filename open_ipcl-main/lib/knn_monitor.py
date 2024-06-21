@@ -9,7 +9,7 @@ except:
     from fastprogress import progress_bar
     
 def knn_monitor(model, trainFeatures, trainLabels, val_loader, 
-                K=200, sigma=1.0, num_chunks=200, knn_device='cpu'):
+                K=25, sigma=1.0, num_chunks=10, knn_device='cpu'):
     
     trainFeatures = trainFeatures.to(knn_device, non_blocking=True) 
     trainLabels = trainLabels.to(knn_device, non_blocking=True)
@@ -115,7 +115,7 @@ def do_kNN(trainFeatures, trainLabels, testFeatures, testLabels, C, K, sigma, de
     
     return top1, top5, total
 
-def repeated_kfold_kNN(model, dataloader, K=40, sigma=.07, n_splits=5, n_repeats=5, random_state=123456, epoch=None):
+def repeated_kfold_kNN(model, dataloader, K=25, sigma=.07, n_splits=5, n_repeats=5, random_state=123456, epoch=None):
     print("\n================================")
     print(' Generalization Epoch: %d' % epoch)
     print("================================")
@@ -146,7 +146,7 @@ def repeated_kfold_kNN(model, dataloader, K=40, sigma=.07, n_splits=5, n_repeats
     print(f"Average Top1 % = {TOP1.mean():4.2f}%, Top5 = {TOP5.mean():4.2f}%")
     return TOP1, TOP5
 
-def run_kNN(model, train_loader, test_loader, K=200, sigma=.07, num_chunks=200, knn_device=None):
+def run_kNN(model, train_loader, test_loader, K=25, sigma=.07, num_chunks=10, knn_device=None):
     print("extracting training features...")
     trainFeatures, trainLabels, indexes = get_features(model, train_loader, to_device=knn_device)
     print("extracting test features...")

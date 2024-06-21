@@ -233,10 +233,10 @@ def get_transforms_custom(image_size=256, crop_size=224, n_samples=5, device=Non
 def main():
     args = Dict({
     "data": 'Data/DataIPCL',
-    "out_dir": "Results",
-    "arch": "ResNet34",
+    "out_dir": "results",
+    "arch": "ResNet18",
     "num_workers": 5,
-    "num_epochs": 5,
+    "num_epochs": 20,
     "start_epoch": 0,
     "evaluate":0,
     "batch_size":10,
@@ -253,21 +253,20 @@ def main():
     "use_lars":0,
     "lr":0.0001,
     "momentum":0.9,
-    "wd":0.005,
-    "batch_multiplier":1,
-    "scheduler":'CosineAnnealing',
+    "wd":0.001,
+    "batch_multiplier":16,
+    "scheduler":"CosineAnnealing",
     "schedule":[120, 160],
     "div_factor":1000,
     "pct_start":0.4,
-    "tau_scheduler":'CosineAnnealing',
+    "tau_scheduler":None,
     "tau_scheduler_start_val": 0.1,
     "tau_scheduler_end_val": 0.01,
     "ipcl_dim":32,
-    "ipcl_k":150,
+    "ipcl_k":512,
     "ipcl_t":0.7,
     "ipcl_n":5,
 
-    
 })
 
     if args.seed is not None:
@@ -352,7 +351,7 @@ def main_worker(gpu, ngpus_per_node, args):
     
     print("=> creating model '{}'".format(args.arch))
     model = IPCL(models.__dict__[args.arch](num_classes=args.ipcl_dim), 
-                 8969, # number of imagenet images
+                 85487, # number of imagenet images
                  K=args.ipcl_k, 
                  T=args.ipcl_t, 
                  out_dim=args.ipcl_dim, 
@@ -399,8 +398,8 @@ def main_worker(gpu, ngpus_per_node, args):
     # TODO: modify instance sampling to happen before collation (as a transform)
     # so that we don't have to use torch.cat to stack imgs (which creates a new copy, like slowing down)
 
-    paths_train= list(Path(root_dir/"ImageFolderDatasetTrain").glob('*/*.npz'))
-    paths_val=list(Path(root_dir/"ImageFolderDatasetVal").glob('*/*.npz'))
+    paths_train= list(Path(root_dir/"ImageFolderDatasetTrainFull").glob('*/*.npz'))
+    paths_val=list(Path(root_dir/"ImageFolderDatasetValFull").glob('*/*.npz'))
     train_dataset = ImageFolderInstanceSamples(paths= paths_train,
                                                n_samples=args.ipcl_n)
         
@@ -625,7 +624,7 @@ def train_model(
     for epoch in mb:
         if args.distributed:
             train_sampler.set_epoch(epoch)
-        train_loss, trainX, trainY, _ = train(
+        train_loss, trainX, trainY, id = train(
             epoch,
             learner,
             optimizer,
@@ -636,17 +635,20 @@ def train_model(
             tau_scheduler=tau_scheduler,
             mb=mb
         )
-
-        # val_loss = validate(learner, val_loader, args, mb=mb)
+        #save embedding space
+        save_file = args.resume + "cosine_embeddings_EP"+ str(epoch)  
+        torch.save({'Embed':trainX, 'labels': trainY, 'indexs':id},save_file)
+        
+        val_loss = validate(learner, val_loader, args, mb=mb)
         top1, top5 = knn_monitor(
             learner.base_encoder, trainX, trainY, val_loader_knn, sigma=learner.T, knn_device=args.device
         )
- 
+
         # track results
         perf_monitor["epoch"].append(epoch)
         perf_monitor["top1"].append(top1)
         perf_monitor["train_loss"].append(train_loss)
-        #perf_monitor["val_loss"].append(val_loss)
+        perf_monitor["val_loss"].append(val_loss)
         graphs = [[perf_monitor["epoch"], perf_monitor["top1"]]]
         x_bounds = [0, num_epochs]
         y_bounds = [0, max(perf_monitor["top1"]) * 1.1]
@@ -726,7 +728,7 @@ def train(epoch, learner, optimizer, train_loader, args, batch_multiplier=1.,
         features.append(feat)
         targets.append(targs.chunk(args.ipcl_n)[0].cpu())
         indexes.append(idxs.chunk(args.ipcl_n)[0].cpu())
-    
+        
         if batch_num % 250 == 0 or batch_num==(len(train_loader)-1):
             lr = optimizer.param_groups[0]['lr']
             print(f"[{epoch}][{batch_num}/{len(train_loader)}]: LOSS: {losses.avg:6.3f}, LR: {lr}, TAU: {taus.avg:6.3f}") 
